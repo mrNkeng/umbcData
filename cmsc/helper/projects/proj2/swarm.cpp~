@@ -1,0 +1,264 @@
+//UMBC - CSEE - CMSC 341 - Fall 2021 - Proj2
+#include "swarm.h"
+Swarm::Swarm(){
+    m_root = nullptr;
+}
+
+Swarm::~Swarm(){
+    clear();
+}
+
+void Swarm::insert(const Robot& robot){
+    insertHelp(robot, m_root);
+}// end insert
+
+void Swarm::insertHelp(const Robot& robot, Robot* r2) {
+    if (r2 == nullptr) {
+        Robot* tempbot  = new Robot(robot);
+        r2 = tempbot;
+    } // end if
+    else if (r2->m_id == robot.m_id) {
+        return;
+    }
+    else if (r2->m_id < robot.m_id){
+        insertHelp(robot, r2->m_left);
+    }// end else if
+    else if (robot.m_id.getLeft() == nullptr) {
+        Robot* tempbot  = new Robot(robot);
+    }
+    else if(robot.m_id.getLeft() != nullptr){
+        insertHelp(robot, r2.getLeft());
+    }
+    else if(r2->m_id > robot.m_id){
+        if(robot.m_id.getRight() == nullptr){
+            Robot* tempbot  = new Robot(robot);
+        }
+    }
+    else {//the only other option for insertion is for the robot to be greater than the value 
+        insertHelp(robot, r2->m_right);
+    }// end else
+    updateHeight(r2);
+    checkImbalance(r2);
+}// end insertHelp
+
+void Swarm::clear(){
+    clearHelp(m_root);
+}// end clear
+
+void Swarm::clearHelp(Robot* r2){ // created a recusive helper function because the clear function accepts 0 Parameters
+    if (r2 != nullptr) {
+            clearHelp(r2->m_right);
+            clearHelp(r2->m_left);
+        r2->m_id = 0;
+        delete r2;
+        r2 = nullptr;
+    }// end if
+}// end clearHelp
+
+
+void Swarm::remove(int id){
+  //  removeHelp(m_root, id);
+    updateHeight(m_root);
+    checkImbalance(m_root);
+}// end remove
+
+Robot* Swarm::removeHelp(Robot* r2, int m_id){
+    if (r2 == nullptr){
+        return r2;
+    }
+    if (m_id > r2->m_id) {
+        r2->m_right = removeHelp(r2->m_right, m_id);
+    }
+    else if (m_id < r2->m_id) {
+        r2->m_left = removeHelp(r2->m_left, m_id);
+    }
+    else {
+    if (r2->m_right != nullptr && r2->m_left != nullptr){
+        Robot* d2 = leftSet(r2->m_right);
+        r2->m_id = d2->m_id;
+        r2->m_state = d2->m_state;
+        r2->m_type = d2->m_type;
+        r2->m_right = removeHelp(r2->m_right, r2->m_id);
+    }
+    else {
+        Robot* r2d2 = r2;
+        if (r2->m_left == nullptr) {
+            r2 = r2->m_right;
+        }// end if
+        else {
+        r2 = r2->m_left;
+        }
+        delete r2d2;
+    }// end else
+    return r2;
+    }
+    return r2;
+}// end removeHelp
+
+Robot* Swarm::leftSet(Robot* r2){
+    if (r2->m_left == nullptr || r2 == nullptr){
+        return r2;
+    }
+    return leftSet(r2->m_left);
+}
+
+void Swarm::updateHeight(Robot* aBot){
+    aBot->m_height = heightHelp(aBot);
+}
+
+
+int Swarm::max(int a, int b) { // calculate the max number
+    if (b > a){
+        return b;
+    }
+    return a;
+}
+
+
+int Swarm::heightHelp(Robot* r2){ // updateHeight helper fuction
+    int rSubHeight = 0;
+    int lSubHeight = 0;
+    if (r2 != nullptr){
+        if (r2->m_left != nullptr){
+           lSubHeight = 1 + heightHelp(r2->m_left);
+        }
+        if (r2->m_right != nullptr){
+            rSubHeight = 1 + heightHelp(r2->m_right);
+        }
+    }
+    return(max(rSubHeight, lSubHeight));
+}
+
+
+int Swarm::checkImbalance(Robot* aBot){
+    //calculating balance factors
+    int left = -1;
+    int right = -1;
+    if (aBot->m_left != nullptr){
+        left = aBot->m_left->m_height;
+    }
+    if (aBot->m_right != nullptr){
+        right = aBot->m_right->m_height;
+    }
+    return left - right;
+}// end checkImbalance
+
+
+Robot* Swarm::leftRotation(Robot* r2) { // helper for the rebalance
+    Robot* y;
+    y = r2->m_right;
+    r2->m_right = y->m_left;
+    y->m_left = r2;
+
+    return y;
+}
+
+
+Robot* Swarm::rightRotation(Robot* r2) { // helper for the rebalance
+    Robot* y; 
+    y = r2->m_left;
+    r2->m_left = y->m_right;
+    y->m_right = r2;
+
+    return y;
+}
+
+
+Robot* Swarm::rebalance(Robot* aBot) {
+   updateHeight(aBot);
+        if(checkImbalance(aBot)== -2 && checkImbalance(aBot->m_right) == -1) {
+            aBot = leftRotation(aBot);
+        }
+        if(checkImbalance(aBot)== 2 && checkImbalance(aBot->m_left) == 1) {
+            aBot = rightRotation(aBot);
+        }
+    return aBot;
+}// end rebalance
+
+
+void Swarm::listRobots() const {
+    listHelp(m_root);
+} // end listRobots
+
+void Swarm::listHelp(Robot* r2) const {
+    if (r2 == nullptr){
+        return;
+    }
+    listHelp(r2->m_left);
+    cout << r2->m_id << " " << "\n";
+    listHelp(r2->m_right);
+        
+}
+
+
+bool Swarm::setState(int id, STATE state){
+     Robot* r2;
+     r2 = stateHelper(id, m_root);
+    if(r2 != nullptr){
+        r2->m_state = state;
+        return true;
+    }
+
+    return false;
+}// end set state
+
+Robot* Swarm::stateHelper(int id, Robot* r2){
+    if(r2 != nullptr) {
+        if (r2->m_id == id){
+            return r2;
+        }
+        if (r2->m_id > id){
+        stateHelper(id, r2->m_left);
+        }
+        if (r2->m_id < id) {
+        stateHelper(id, r2->m_right);
+        }
+    }
+    return nullptr;
+}// end stateHelper
+
+void Swarm::removeDead(){
+    deadHelper(m_root);
+}//end remove dead
+
+void Swarm::deadHelper(Robot* r2){
+    if (r2 != nullptr) {
+            clearHelp(r2->m_right);
+            clearHelp(r2->m_left);
+        r2->m_id = 0;
+        if (r2->m_state == DEAD){
+            remove(r2->m_id);
+        }
+    }
+}// end deadHelper
+
+
+bool Swarm::findBot(int id) const {
+    return fBotHelp(id, m_root);
+}// end findbot
+
+
+
+bool Swarm::fBotHelp(int id, Robot* r2) const { // find Bot helper function
+    if(r2 != nullptr) {
+        if (r2->m_id == id){
+            return true;
+        }
+       return fBotHelp(id, r2->m_left) || fBotHelp(id, r2->m_right);
+    }
+    return false;
+}
+
+void Swarm::dumpTree() const {
+    dump(m_root);
+}
+
+void Swarm::dump(Robot* aBot) const{
+    if (aBot != nullptr){
+        cout << "(";
+        dump(aBot->m_left);//first visit the left child
+        cout << aBot->m_id << ":" << aBot->m_height;//second visit the node itself
+        dump(aBot->m_right);//third visit the right child
+        cout << ")";
+    }
+}
